@@ -11,12 +11,13 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://blooms-that-never-fade.netlify.app/" />
   <meta name="twitter:card" content="summary_large_image" />
-  <!-- CSP temporarily disabled for debugging
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https://res.cloudinary.com https://*.cloudinary.com data:; connect-src 'self' https://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebaseio.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://api.cloudinary.com https://api.emailjs.com; frame-src 'none'; object-src 'none'; base-uri 'self';" />
-  -->
+  <!-- CSP should be set as HTTP header on production server, not meta tag for local dev -->
+  <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: data:; connect-src 'self' https://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebaseio.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://api.cloudinary.com https://api.emailjs.com; frame-src 'none'; object-src 'none'; base-uri 'self';" /> -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌹</text></svg>" />
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
 
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -242,6 +243,20 @@
       z-index: 101; transition: left .4s;
     }
     nav ul.open { left: 0; }
+    .nav-backdrop {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,.35); z-index: 100;
+      opacity: 0; visibility: hidden;
+      transition: opacity .4s, visibility .4s;
+    }
+    .nav-backdrop.active { opacity: 1; visibility: visible; }
+    .skeleton-loading { padding: 1rem; }
+    .skeleton-card {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%; animation: shimmer 1.5s infinite;
+      border-radius: 12px; height: 72px; margin-bottom: .75rem;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .close-btn {
       width: 38px; height: 38px; border-radius: 12px; border: none;
       background: rgba(0,0,0,.04); cursor: pointer;
@@ -1318,6 +1333,80 @@
     }
     .btn-delete-order:hover { background: #b71c1c; color: #fff; }
     .btn-delete-order:disabled { opacity: .5; cursor: not-allowed; }
+    .admin-action-btns { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
+    .admin-action-btn {
+      padding: .35rem .75rem; border-radius: 8px; font-size: .7rem; font-weight: 600;
+      cursor: pointer; transition: all .2s; letter-spacing: .3px; border: 1.5px solid;
+      background: #fff;
+    }
+    .admin-action-btn:hover { color: #fff; }
+    .admin-action-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .admin-action-btn.act-confirm { color: #1565c0; border-color: #1565c0; }
+    .admin-action-btn.act-confirm:hover { background: #1565c0; }
+    .admin-action-btn.act-prepare { color: #c62828; border-color: #c62828; }
+    .admin-action-btn.act-prepare:hover { background: #c62828; }
+    .admin-action-btn.act-ship { color: #2e7d32; border-color: #2e7d32; }
+    .admin-action-btn.act-ship:hover { background: #2e7d32; }
+    .admin-action-btn.act-deliver { color: #1b5e20; border-color: #1b5e20; }
+    .admin-action-btn.act-deliver:hover { background: #1b5e20; }
+    .admin-action-btn.act-cancel { color: #757575; border-color: #757575; }
+    .admin-action-btn.act-cancel:hover { background: #757575; }
+    .admin-action-btn.act-delete { color: #b71c1c; border-color: #b71c1c; }
+    .admin-action-btn.act-delete:hover { background: #b71c1c; }
+    .btn-pay-order {
+      display: inline-block; margin-top: .5rem; margin-right: .35rem; padding: .35rem .9rem;
+      border: 1.5px solid #1565c0; background: #1565c0; color: #fff;
+      border-radius: 8px; font-size: .72rem; font-weight: 600; cursor: pointer;
+      transition: all .25s; letter-spacing: .3px;
+    }
+    .btn-pay-order:hover { background: #0d47a1; border-color: #0d47a1; }
+    .btn-pay-order:disabled { opacity: .5; cursor: not-allowed; }
+    .pay-modal-overlay {
+      position: fixed; inset: 0; z-index: 10001; background: rgba(0,0,0,.55);
+      display: none; align-items: center; justify-content: center; padding: 1rem;
+    }
+    .pay-modal-overlay.active { display: flex; }
+    .pay-modal {
+      background: #fff; border-radius: 20px; max-width: 420px; width: 100%;
+      max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    }
+    .pay-modal-header {
+      padding: 1.25rem 1.5rem; border-bottom: 1px solid #f0ebe7;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .pay-modal-header h3 { font-family: 'Playfair Display', serif; font-size: 1.15rem; margin: 0; }
+    .pay-modal-body { padding: 1.25rem 1.5rem; }
+    .pay-modal-order-info {
+      background: #faf8f6; border-radius: 12px; padding: .85rem 1rem; margin-bottom: 1rem;
+      font-size: .82rem; color: #555; line-height: 1.6;
+    }
+    .pay-modal-order-info strong { color: var(--charcoal); }
+    .pay-modal .qr-tabs { display: flex; gap: .4rem; margin-bottom: .75rem; }
+    .pay-modal .qr-tab {
+      flex: 1; padding: .45rem; border: 2px solid #e8e2de; background: #fff;
+      border-radius: 8px; font-size: .75rem; font-weight: 600; cursor: pointer;
+      text-align: center; transition: all .2s;
+    }
+    .pay-modal .qr-tab.active { border-color: var(--rose); background: var(--blush); color: var(--deep-rose); }
+    .pay-modal .pay-qr-panel { display: none; text-align: center; margin-bottom: 1rem; }
+    .pay-modal .pay-qr-panel.active { display: block; }
+    .pay-modal .pay-qr-panel img { max-width: 220px; border-radius: 12px; border: 2px solid #f0ebe7; }
+    .pay-modal .pay-qr-empty { color: #bbb; font-size: .82rem; padding: 1.5rem; }
+    .pay-modal .pay-proof-area {
+      border: 2px dashed #e0d6cf; border-radius: 12px; padding: 1.25rem;
+      text-align: center; cursor: pointer; transition: border-color .3s; margin-bottom: .75rem;
+    }
+    .pay-modal .pay-proof-area:hover { border-color: var(--rose); }
+    .pay-modal .pay-proof-area.has-file { border-style: solid; border-color: var(--sage); }
+    .pay-modal .pay-proof-preview { max-width: 100%; max-height: 200px; border-radius: 10px; display: none; }
+    .pay-modal .pay-proof-hint { color: #aaa; font-size: .82rem; }
+    .pay-modal .pay-submit-btn {
+      width: 100%; padding: .75rem; border: none; border-radius: 10px;
+      background: var(--rose); color: #fff; font-size: .9rem; font-weight: 600;
+      cursor: pointer; transition: background .2s; font-family: 'Inter', sans-serif;
+    }
+    .pay-modal .pay-submit-btn:hover { background: var(--deep-rose); }
+    .pay-modal .pay-submit-btn:disabled { opacity: .5; cursor: not-allowed; }
     .admin-order-card {
       background: #fff; border-radius: 16px; padding: 1.25rem 1.5rem;
       margin-bottom: 1rem; box-shadow: 0 2px 12px rgba(0,0,0,.05);
@@ -1330,6 +1419,70 @@
       cursor: pointer; outline: none; transition: border-color .3s;
     }
     .admin-status-select:focus { border-color: var(--rose); }
+    .admin-orders-section {
+      margin-bottom: 1.25rem; border-radius: 14px; overflow: hidden;
+      border: 1px solid #ece7e3;
+    }
+    .admin-orders-section-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: .85rem 1.25rem; cursor: pointer; user-select: none;
+      font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600;
+      transition: background .2s;
+    }
+    .admin-orders-section-header:hover { filter: brightness(.95); }
+    .admin-orders-section-header .section-count {
+      font-family: 'Inter', sans-serif; font-size: .75rem; font-weight: 700;
+      background: rgba(255,255,255,.6); padding: .15rem .55rem; border-radius: 20px;
+    }
+    .admin-orders-section-header .section-arrow {
+      transition: transform .25s; font-size: .8rem;
+    }
+    .admin-orders-section.collapsed .section-arrow { transform: rotate(-90deg); }
+    .admin-orders-section.collapsed .admin-orders-section-body { display: none; }
+    .admin-orders-section-body { padding: .5rem .75rem .75rem; background: #faf8f6; }
+    .section-pending .admin-orders-section-header { background: #fff3e0; color: #e65100; }
+    .section-confirmed .admin-orders-section-header { background: #e3f2fd; color: #1565c0; }
+    .section-preparing .admin-orders-section-header { background: #fce4ec; color: #c62828; }
+    .section-shipped .admin-orders-section-header { background: #e8f5e9; color: #2e7d32; }
+    .section-delivered .admin-orders-section-header { background: #e8f5e9; color: #1b5e20; }
+    .section-cancelled .admin-orders-section-header { background: #f5f5f5; color: #757575; }
+    /* Sales Dashboard */
+    .sales-dashboard { max-width: 900px; width: 100%; margin: 0 auto; padding: 0 4% 1rem; }
+    .sales-period-tabs { display: flex; gap: .4rem; margin-bottom: .75rem; flex-wrap: wrap; }
+    .sales-period-tab {
+      padding: .4rem .9rem; border-radius: 20px; border: 1.5px solid var(--rose);
+      background: transparent; color: var(--rose); font-size: .78rem; font-weight: 600;
+      cursor: pointer; transition: all .25s;
+    }
+    .sales-period-tab.active, .sales-period-tab:hover { background: var(--rose); color: #fff; }
+    .sales-cards { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    .sales-card {
+      background: linear-gradient(135deg, #fff8f7, #fff1ee); border-radius: 14px;
+      padding: 1rem 1.25rem; text-align: center;
+      box-shadow: 0 2px 12px rgba(212,115,110,.1); transition: transform .2s;
+    }
+    .sales-card:hover { transform: translateY(-2px); }
+    .sales-card .sales-label { font-size: .75rem; color: #999; text-transform: uppercase; letter-spacing: .5px; margin-bottom: .35rem; }
+    .sales-card .sales-value { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; color: var(--charcoal); }
+    .sales-card .sales-value small { font-size: .65em; font-weight: 400; color: #999; }
+    .sales-card.card-sales { background: linear-gradient(135deg, #e8f5e9, #c8e6c9); }
+    .sales-card.card-sales .sales-value { color: #2e7d32; }
+    body.night-mode .sales-card { background: linear-gradient(135deg, #2a2a2a, #333); }
+    body.night-mode .sales-card.card-sales { background: linear-gradient(135deg, #1b3a1b, #2a4d2a); }
+    body.night-mode .sales-card .sales-label { color: #aaa; }
+    body.night-mode .sales-card .sales-value { color: #eee; }
+    body.night-mode .sales-card.card-sales .sales-value { color: #81c784; }
+    body.night-mode .sales-period-tab { border-color: #888; color: #ccc; }
+    body.night-mode .sales-period-tab.active, body.night-mode .sales-period-tab:hover { background: var(--rose); color: #fff; border-color: var(--rose); }
+    .btn-export-excel {
+      padding: .45rem 1rem; border-radius: 20px; border: 1.5px solid #2e7d32;
+      background: #e8f5e9; color: #2e7d32; font-size: .78rem; font-weight: 600;
+      cursor: pointer; transition: all .25s; white-space: nowrap;
+    }
+    .btn-export-excel:hover { background: #2e7d32; color: #fff; }
+    body.night-mode .btn-export-excel { background: #1b3a1b; color: #81c784; border-color: #81c784; }
+    body.night-mode .btn-export-excel:hover { background: #81c784; color: #1b3a1b; }
+    @media (max-width: 480px) { .sales-card .sales-value { font-size: 1.2rem; } }
     .admin-bar .btn-orders { background: var(--rose); color: #fff; }
     .admin-bar .btn-orders:hover { background: var(--deep-rose); }
     .guest-track-note { font-size: .78rem; color: #999; text-align: center; margin-top: .75rem; }
@@ -1398,6 +1551,7 @@
       </div>
     </div>
   </nav>
+  <div class="nav-backdrop" id="navBackdrop"></div>
 
   <!-- ── Hero ── -->
   <section class="hero" id="hero">
@@ -1676,7 +1830,7 @@
           </div>
           <div class="form-group">
             <label>Phone Number</label>
-            <input type="tel" name="customer_phone" id="orderPhone" placeholder="+63 9XX XXX XXXX" maxlength="20" />
+            <input type="tel" name="customer_phone" id="orderPhone" placeholder="+63 9XX XXX XXXX" maxlength="20" pattern="[+]?[0-9\s\-]{7,20}" title="Enter a valid phone number (7-20 digits, spaces or dashes allowed)" />
           </div>
           <div class="form-group">
             <label>Shipping Address</label>
@@ -1689,6 +1843,10 @@
               <input type="number" name="quantity" value="1" min="1" max="99" id="qtyInput" required />
               <button type="button" id="qtyPlus">&plus;</button>
             </div>
+          </div>
+          <div class="order-total-row" id="orderTotalRow" style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;font-size:.95rem;font-weight:600;border-top:1px dashed rgba(0,0,0,.1);margin-top:.25rem;">
+            <span>Order Total:</span>
+            <span id="orderTotalValue">--</span>
           </div>
           <div class="form-group">
             <label>Payment Method</label>
@@ -1799,11 +1957,61 @@
     </div>
   </div>
 
+  <!-- ── Pay Now Modal ── -->
+  <div class="pay-modal-overlay" id="payModalOverlay">
+    <div class="pay-modal">
+      <div class="pay-modal-header">
+        <h3>&#128179; Pay Online</h3>
+        <button class="close-btn" id="payModalClose"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="pay-modal-body">
+        <div class="pay-modal-order-info" id="payOrderInfo"></div>
+        <p style="font-size:.82rem;color:#777;margin-bottom:.75rem;">Scan a QR code below, then upload your payment screenshot.</p>
+        <div class="qr-tabs" id="payQrTabs">
+          <button class="qr-tab" type="button" data-platform="bdo">BDO</button>
+          <button class="qr-tab" type="button" data-platform="gcash">GCash</button>
+          <button class="qr-tab" type="button" data-platform="maya">Maya</button>
+          <button class="qr-tab" type="button" data-platform="bpi">BPI</button>
+        </div>
+        <div class="pay-qr-panel" id="payQr_bdo"><div class="pay-qr-empty">Not set</div></div>
+        <div class="pay-qr-panel" id="payQr_gcash"><div class="pay-qr-empty">Not set</div></div>
+        <div class="pay-qr-panel" id="payQr_maya"><div class="pay-qr-empty">Not set</div></div>
+        <div class="pay-qr-panel" id="payQr_bpi"><div class="pay-qr-empty">Not set</div></div>
+        <div class="pay-proof-area" id="payProofArea">
+          <input type="file" id="payProofInput" accept=".jpg,.jpeg,.png,.gif,.webp" style="display:none;" />
+          <div class="pay-proof-hint" id="payProofHint">&#128248; Tap to upload payment screenshot</div>
+          <img class="pay-proof-preview" id="payProofPreview" src="" alt="Proof" />
+        </div>
+        <div id="payProofStatus" style="font-size:.78rem;margin-bottom:.75rem;"></div>
+        <button class="pay-submit-btn" id="paySubmitBtn" disabled>Submit Payment Proof</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Admin Orders Panel ── -->
   <div class="admin-orders-overlay" id="adminOrdersOverlay">
     <div class="admin-orders-header">
       <h2>&#128230; All Customer Orders</h2>
+      <button class="btn-export-excel" id="exportExcelBtn" title="Download Excel Report">&#128202; Export Excel</button>
       <button class="close-btn dashboard-close" id="adminOrdersClose"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="sales-dashboard" id="salesDashboard" style="display:none;">
+      <div class="sales-period-tabs" id="salesPeriodTabs">
+        <button class="sales-period-tab active" data-period="daily">Today</button>
+        <button class="sales-period-tab" data-period="weekly">This Week</button>
+        <button class="sales-period-tab" data-period="monthly">This Month</button>
+        <button class="sales-period-tab" data-period="ytd">Year to Date</button>
+      </div>
+      <div class="sales-cards">
+        <div class="sales-card card-sales">
+          <div class="sales-label">Total Sales</div>
+          <div class="sales-value" id="salesTotal">&#8369;0.00</div>
+        </div>
+        <div class="sales-card">
+          <div class="sales-label">Transactions</div>
+          <div class="sales-value" id="salesCount">0</div>
+        </div>
+      </div>
     </div>
     <div class="admin-orders-body" id="adminOrdersBody">
       <div class="dashboard-empty">
@@ -1987,7 +2195,7 @@
             <div class="opt-label">None</div>
           </div>
         </div>
-        <button class="settings-save-btn settings-save-popup" onclick="document.getElementById('settingsSaveAll').click()">💾 Save All Settings</button>
+        <button class="settings-save-btn settings-save-popup">💾 Save All Settings</button>
       </div>
     </div>
   </div>
@@ -2010,7 +2218,7 @@
           </label>
         </div>
 
-        <button class="settings-save-btn settings-save-popup" onclick="document.getElementById('settingsSaveAll').click()">💾 Save All Settings</button>
+        <button class="settings-save-btn settings-save-popup">💾 Save All Settings</button>
       </div>
     </div>
   </div>
@@ -2045,7 +2253,7 @@
             <div class="bg-preview" id="bgPreview_contact"></div>
           </div>
         </div>
-        <button class="settings-save-btn settings-save-popup" onclick="document.getElementById('settingsSaveAll').click()">💾 Save All Settings</button>
+        <button class="settings-save-btn settings-save-popup">💾 Save All Settings</button>
       </div>
     </div>
   </div>
@@ -2056,6 +2264,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <!-- EmailJS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
   <script>
     /* ── Load Flower Images from Cloudinary ── */
@@ -2076,19 +2286,24 @@
     const hamburger = document.getElementById('hamburger');
     const navMenu = document.getElementById('navMenu');
     const sidebarClose = document.getElementById('sidebarClose');
-    hamburger.addEventListener('click', () => {
-      hamburger.classList.toggle('active');
-      navMenu.classList.toggle('open');
-    });
-    sidebarClose.addEventListener('click', () => {
+    const navBackdrop = document.getElementById('navBackdrop');
+    function openSidebar() {
+      hamburger.classList.add('active');
+      navMenu.classList.add('open');
+      navBackdrop.classList.add('active');
+    }
+    function closeSidebar() {
       hamburger.classList.remove('active');
       navMenu.classList.remove('open');
+      navBackdrop.classList.remove('active');
+    }
+    hamburger.addEventListener('click', () => {
+      navMenu.classList.contains('open') ? closeSidebar() : openSidebar();
     });
+    sidebarClose.addEventListener('click', closeSidebar);
+    navBackdrop.addEventListener('click', closeSidebar);
     navMenu.querySelectorAll('a').forEach(link =>
-      link.addEventListener('click', () => {
-        hamburger.classList.remove('active');
-        navMenu.classList.remove('open');
-      })
+      link.addEventListener('click', closeSidebar)
     );
 
     /* ── Navbar Shadow on Scroll ── */
@@ -2460,7 +2675,7 @@
               applyQrUrl(platform, url);
             } else {
               if (typeof qrUrls !== 'undefined') qrUrls[platform] = url;
-              const orderCard = document.getElementById('qrCard_' + platform);
+              const orderCard = document.getElementById('qrPanel_' + platform);
               if (orderCard) {
                 const img = orderCard.querySelector('img');
                 const empty = orderCard.querySelector('.qr-empty');
@@ -2686,7 +2901,6 @@
       isAdmin = true;
       document.body.classList.add('admin-mode');
       document.getElementById('adminBar').classList.add('active');
-      document.getElementById('adminBar').classList.add('active');
       document.querySelectorAll('.gallery-card').forEach(card => {
         card.querySelector('h3').contentEditable = true;
         card.querySelector('.card-body p').contentEditable = true;
@@ -2705,7 +2919,6 @@
     function exitAdmin() {
       isAdmin = false;
       document.body.classList.remove('admin-mode');
-      document.getElementById('adminBar').classList.remove('active');
       document.getElementById('adminBar').classList.remove('active');
       document.querySelectorAll('.gallery-card').forEach(card => {
         card.querySelector('h3').contentEditable = false;
@@ -3135,6 +3348,7 @@
       document.getElementById('orderModalName').textContent = name;
       document.getElementById('orderModalPrice').textContent = price;
       document.getElementById('qtyInput').value = 1;
+      updateOrderTotal();
 
       // Show/hide based on auth state
       const gate = document.getElementById('orderLoginGate');
@@ -3173,32 +3387,60 @@
       if (e.target === orderModal) closeOrderModal();
     });
 
+    // Update order total display
+    function updateOrderTotal() {
+      const priceStr = currentOrderPrice || '';
+      const num = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
+      const qty = parseInt(document.getElementById('qtyInput').value, 10) || 1;
+      const totalEl = document.getElementById('orderTotalValue');
+      if (!isNaN(num) && totalEl) {
+        const currency = priceStr.replace(/[0-9.,\s]/g, '').trim() || '\u20B1';
+        totalEl.textContent = currency + (num * qty).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+      }
+    }
+
     // Quantity controls
     document.getElementById('qtyMinus').addEventListener('click', () => {
       const inp = document.getElementById('qtyInput');
       if (parseInt(inp.value) > 1) inp.value = parseInt(inp.value) - 1;
+      updateOrderTotal();
     });
     document.getElementById('qtyPlus').addEventListener('click', () => {
       const inp = document.getElementById('qtyInput');
       if (parseInt(inp.value) < 99) inp.value = parseInt(inp.value) + 1;
+      updateOrderTotal();
     });
+    document.getElementById('qtyInput').addEventListener('input', updateOrderTotal);
 
     // Submit order via EmailJS + save to Firebase
+    let _lastOrderSubmit = 0;
     orderForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const btn = orderForm.querySelector('button[type="submit"]');
+
+      // Rate limit: 1 order per 30 seconds
+      const now = Date.now();
+      if (now - _lastOrderSubmit < 30000) {
+        alert('Please wait before placing another order.');
+        return;
+      }
+
       btn.textContent = 'Sending...';
       btn.disabled = true;
+      _lastOrderSubmit = now;
 
       const formData = new FormData(orderForm);
       const uName = currentUser.displayName || currentUser.email.split('@')[0];
       const phone = formData.get('customer_phone') || 'Not provided';
       const address = formData.get('shipping_address') || 'Not provided';
 
-      // Security: Use canonical price from Firebase, not DOM
+      // Security: Use canonical price from Firebase, not DOM — reject if tampered
       const verifiedPrice = canonicalPrices[currentOrderProduct.trim()] || currentOrderPrice;
       if (verifiedPrice !== currentOrderPrice) {
-        console.warn('Price mismatch detected — using server price:', verifiedPrice);
+        alert('Price verification failed. Please refresh and try again.');
+        btn.innerHTML = 'Place Order &#10148;';
+        btn.disabled = false;
+        return;
       }
 
       // Validate quantity
@@ -3254,9 +3496,15 @@
         }).catch(err => console.warn('EmailJS notification failed (order still saved):', err));
       }
 
-      Promise.all(firebasePromises).then(() => {
+      Promise.all(firebasePromises).then((results) => {
+        // Generate confirmation number from Firebase push key
+        let confirmNum = 'BL-' + Date.now().toString(36).toUpperCase().slice(-6);
+        if (results && results[0] && results[0].key) {
+          confirmNum = 'BL-' + results[0].key.slice(-8).toUpperCase();
+        }
         btn.textContent = 'Order Placed! ✓';
         btn.style.background = 'var(--sage)';
+        alert('🌸 Order Confirmed!\n\nReference: ' + confirmNum + '\n\nThank you for your order! You can track it in My Orders.');
 
         // Reset proof upload
         window._paymentProofUrl = '';
@@ -3397,6 +3645,7 @@
     document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
       e.preventDefault();
       document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
       document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
       document.getElementById('forgotForm').classList.add('active');
     });
@@ -3496,10 +3745,20 @@
       document.getElementById('userDropdown').classList.remove('open');
     });
 
+    // Shared order status config
+    const ORDER_STATUSES = [
+      { key: 'Pending',   icon: '\u23f3' },
+      { key: 'Confirmed', icon: '\u2705' },
+      { key: 'Preparing', icon: '\uD83C\uDF3A' },
+      { key: 'Shipped',   icon: '\uD83D\uDE9A' },
+      { key: 'Delivered', icon: '\uD83C\uDF81' },
+      { key: 'Cancelled', icon: '\u274c' }
+    ];
+
     // Load customer's orders
     function loadMyOrders() {
       const body = document.getElementById('dashboardBody');
-      body.innerHTML = '<p style="text-align:center;padding:2rem;color:#999;">Loading...</p>';
+      body.innerHTML = '<div class="skeleton-loading"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>';
       if (!firebaseReady || !currentUser) {
         body.innerHTML = '<div class="dashboard-empty"><span>&#128203;</span><p>Sign in to see your orders.</p></div>';
         return;
@@ -3511,23 +3770,47 @@
           return;
         }
         const sorted = Object.entries(allOrders).sort((a, b) => new Date(b[1].date) - new Date(a[1].date));
-        body.innerHTML = sorted.map(([id, o]) => {
-          const sc = 'status-' + (o.status || 'pending').toLowerCase();
+        const statusList = ORDER_STATUSES.map(s => ({ ...s, label: s.key }));
+        const grouped = {};
+        statusList.forEach(s => { grouped[s.key] = []; });
+        sorted.forEach(([id, o]) => {
           const st = o.status || 'Pending';
-          const dt = new Date(o.date).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
-          const canCancel = (st === 'Pending' || st === 'Confirmed');
-          return '<div class="order-card"><div>'
-            + '<div class="order-card-product">' + escapeHtml(o.product) + '</div>'
-            + '<div class="order-card-details">Qty: ' + escapeHtml(String(o.quantity)) + ' &middot; ' + escapeHtml(o.payment_method || 'N/A')
-            + '<br>&#128205; ' + escapeHtml(o.shipping_address || 'N/A')
-            + (o.notes && o.notes !== 'None' ? '<br>Notes: ' + escapeHtml(o.notes) : '') + '</div>'
-            + '</div><div class="order-card-meta">'
-            + '<div class="order-card-price">' + escapeHtml(o.price) + '</div>'
-            + '<div class="order-card-date">' + dt + '</div>'
-            + '<span class="status-badge ' + sc + '">' + escapeHtml(st) + '</span>'
-            + (canCancel ? '<button class="btn-cancel-order" data-order-id="' + escapeHtml(id) + '">Cancel Order</button>' : '')
-            + ((st === 'Cancelled' || st === 'Delivered') ? '<button class="btn-delete-order" data-order-id="' + escapeHtml(id) + '">🗑 Delete</button>' : '')
-            + '</div></div>';
+          if (!grouped[st]) grouped[st] = [];
+          grouped[st].push([id, o]);
+        });
+
+        body.innerHTML = statusList.map(s => {
+          const items = grouped[s.key];
+          const count = items ? items.length : 0;
+          const cardsHtml = count === 0
+            ? '<p style="text-align:center;color:#bbb;padding:.75rem;font-size:.82rem;">No ' + s.label.toLowerCase() + '</p>'
+            : items.map(([id, o]) => {
+            const sc = 'status-' + s.key.toLowerCase();
+            const st = o.status || 'Pending';
+            const dt = new Date(o.date).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
+            const canCancel = (st === 'Pending' || st === 'Confirmed');
+            const needsPay = (st === 'Pending') && (o.payment_method === 'Cash on Delivery' || !o.payment_proof);
+            return '<div class="order-card"><div>'
+              + '<div class="order-card-product">' + escapeHtml(o.product) + '</div>'
+              + '<div class="order-card-details">Qty: ' + escapeHtml(String(o.quantity)) + ' &middot; ' + escapeHtml(o.payment_method || 'N/A')
+              + '<br>&#128205; ' + escapeHtml(o.shipping_address || 'N/A')
+              + (o.notes && o.notes !== 'None' ? '<br>Notes: ' + escapeHtml(o.notes) : '') + '</div>'
+              + '</div><div class="order-card-meta">'
+              + '<div class="order-card-price">' + escapeHtml(o.price) + '</div>'
+              + '<div class="order-card-date">' + dt + '</div>'
+              + '<span class="status-badge ' + sc + '">' + escapeHtml(st) + '</span>'
+              + (needsPay ? '<button class="btn-pay-order" data-order-id="' + escapeHtml(id) + '" data-product="' + escapeHtml(o.product) + '" data-price="' + escapeHtml(o.price) + '" data-qty="' + escapeHtml(String(o.quantity)) + '">&#128179; Pay Now</button>' : '')
+              + (canCancel ? '<button class="btn-cancel-order" data-order-id="' + escapeHtml(id) + '">Cancel Order</button>' : '')
+              + ((st === 'Cancelled' || st === 'Delivered') ? '<button class="btn-delete-order" data-order-id="' + escapeHtml(id) + '">\ud83d\uddd1 Delete</button>' : '')
+              + '</div></div>';
+          }).join('');
+          return '<div class="admin-orders-section section-' + s.key.toLowerCase() + (count === 0 ? ' collapsed' : '') + '">'
+            + '<div class="admin-orders-section-header">'
+            + '<span>' + s.icon + ' ' + s.label + '</span>'
+            + '<span><span class="section-count">' + items.length + '</span> <span class="section-arrow">&#9660;</span></span>'
+            + '</div>'
+            + '<div class="admin-orders-section-body">' + cardsHtml + '</div>'
+            + '</div>';
         }).join('');
       }).catch(err => {
         console.error('Load orders error:', err);
@@ -3566,74 +3849,402 @@
       }
     });
 
+    /* ── Pay Now Modal Logic ── */
+    let _payOrderId = '';
+    let _payProofUrl = '';
+
+    // Open Pay Now modal
+    document.getElementById('dashboardBody').addEventListener('click', (e) => {
+      if (!e.target.classList.contains('btn-pay-order')) return;
+      const btn = e.target;
+      _payOrderId = btn.dataset.orderId;
+      _payProofUrl = '';
+      document.getElementById('payOrderInfo').innerHTML =
+        '<strong>' + escapeHtml(btn.dataset.product) + '</strong><br>'
+        + 'Price: ' + escapeHtml(btn.dataset.price) + ' &middot; Qty: ' + escapeHtml(btn.dataset.qty);
+      // Reset proof area
+      document.getElementById('payProofPreview').style.display = 'none';
+      document.getElementById('payProofHint').style.display = '';
+      document.getElementById('payProofArea').classList.remove('has-file');
+      document.getElementById('payProofInput').value = '';
+      document.getElementById('payProofStatus').textContent = '';
+      document.getElementById('paySubmitBtn').disabled = true;
+      // Load QR codes from Firebase
+      loadPayQrCodes();
+      // Show modal
+      document.getElementById('payModalOverlay').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    });
+
+    // Close Pay modal
+    document.getElementById('payModalClose').addEventListener('click', () => {
+      document.getElementById('payModalOverlay').classList.remove('active');
+      document.body.style.overflow = '';
+    });
+    document.getElementById('payModalOverlay').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        document.getElementById('payModalOverlay').classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    });
+
+    // QR tab switching inside Pay modal
+    document.getElementById('payQrTabs').addEventListener('click', (e) => {
+      const tab = e.target.closest('.qr-tab');
+      if (!tab) return;
+      document.querySelectorAll('#payQrTabs .qr-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.pay-qr-panel').forEach(p => p.classList.remove('active'));
+      const panel = document.getElementById('payQr_' + tab.dataset.platform);
+      if (panel) panel.classList.add('active');
+    });
+
+    // Load QR code images into Pay modal
+    function loadPayQrCodes() {
+      document.querySelectorAll('.pay-qr-panel').forEach(p => {
+        p.innerHTML = '<div class="pay-qr-empty">Loading...</div>';
+        p.classList.remove('active');
+      });
+      document.querySelectorAll('#payQrTabs .qr-tab').forEach(t => t.classList.remove('active'));
+      firebase.database().ref('siteData/qrCodes').once('value').then(snap => {
+        const qr = snap.val() || {};
+        ['bdo', 'gcash', 'maya', 'bpi'].forEach(platform => {
+          const panel = document.getElementById('payQr_' + platform);
+          if (qr[platform] && /^https:\/\//i.test(qr[platform])) {
+            panel.innerHTML = '<img src="' + escapeHtml(qr[platform]) + '" alt="' + platform.toUpperCase() + ' QR" />';
+          } else {
+            panel.innerHTML = '<div class="pay-qr-empty">Not set</div>';
+          }
+        });
+        // Auto-select first available
+        const first = ['bdo', 'gcash', 'maya', 'bpi'].find(p => qr[p]);
+        if (first) {
+          document.querySelector('#payQrTabs .qr-tab[data-platform="' + first + '"]').classList.add('active');
+          document.getElementById('payQr_' + first).classList.add('active');
+        } else {
+          document.querySelector('#payQrTabs .qr-tab').classList.add('active');
+          document.querySelector('.pay-qr-panel').classList.add('active');
+        }
+      });
+    }
+
+    // Proof upload inside Pay modal
+    document.getElementById('payProofArea').addEventListener('click', () => {
+      document.getElementById('payProofInput').click();
+    });
+    document.getElementById('payProofInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) { alert('Only image files allowed.'); e.target.value = ''; return; }
+      if (file.size > 5 * 1024 * 1024) { alert('Max 5MB.'); e.target.value = ''; return; }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const prev = document.getElementById('payProofPreview');
+        prev.src = ev.target.result;
+        prev.style.display = 'block';
+        document.getElementById('payProofHint').style.display = 'none';
+        document.getElementById('payProofArea').classList.add('has-file');
+      };
+      reader.readAsDataURL(file);
+      const status = document.getElementById('payProofStatus');
+      status.textContent = 'Uploading...';
+      status.style.color = '#999';
+      document.getElementById('paySubmitBtn').disabled = true;
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('upload_preset', 'ml_default');
+      fd.append('folder', 'blooms-proofs');
+      fetch('https://api.cloudinary.com/v1_1/dly1ped5n/image/upload', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+          if (data.secure_url && /^https:\/\/res\.cloudinary\.com\//i.test(data.secure_url)) {
+            _payProofUrl = data.secure_url;
+            status.textContent = '\u2713 Uploaded successfully';
+            status.style.color = '#2e7d32';
+            document.getElementById('paySubmitBtn').disabled = false;
+          } else {
+            status.textContent = 'Upload failed. Try again.';
+            status.style.color = '#c62828';
+          }
+        }).catch(() => {
+          status.textContent = 'Upload error. Try again.';
+          status.style.color = '#c62828';
+        });
+    });
+
+    // Submit payment proof
+    document.getElementById('paySubmitBtn').addEventListener('click', () => {
+      if (!_payOrderId || !_payProofUrl) return;
+      const btn = document.getElementById('paySubmitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+      firebase.database().ref('orders/' + _payOrderId).update({
+        payment_method: 'Online Payment',
+        payment_proof: _payProofUrl
+      }).then(() => {
+        btn.textContent = '\u2713 Payment Submitted!';
+        btn.style.background = '#2e7d32';
+        setTimeout(() => {
+          document.getElementById('payModalOverlay').classList.remove('active');
+          document.body.style.overflow = '';
+          loadMyOrders();
+        }, 1200);
+      }).catch(err => {
+        alert('Failed: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Submit Payment Proof';
+        btn.style.background = '';
+      });
+    });
+
     // Admin: Close orders panel
     document.getElementById('adminOrdersClose').addEventListener('click', () => {
       document.getElementById('adminOrdersOverlay').classList.remove('active');
       document.body.style.overflow = '';
     });
 
-    // Admin: Delete order permanently
+    // Admin: Action buttons (status change + delete)
     document.getElementById('adminOrdersBody').addEventListener('click', (e) => {
-      if (e.target.classList.contains('btn-delete-order')) {
-        const oid = e.target.dataset.orderId;
+      const btn = e.target.closest('.admin-action-btn');
+      if (!btn) return;
+      const oid = btn.dataset.orderId;
+      const action = btn.dataset.action;
+      if (!oid || !action) return;
+
+      if (action === 'delete') {
         if (!confirm('Delete this order permanently? This cannot be undone.')) return;
-        e.target.disabled = true;
-        e.target.textContent = 'Deleting...';
+        btn.disabled = true;
+        btn.textContent = 'Deleting...';
         firebase.database().ref('orders/' + oid).remove().then(() => {
           loadAllOrders();
         }).catch(err => {
           alert('Delete failed: ' + err.message);
-          e.target.disabled = false;
-          e.target.textContent = '🗑 Delete Permanently';
+          btn.disabled = false;
+          btn.textContent = '\ud83d\uddd1 Delete';
+        });
+      } else {
+        const statusMap = { confirm: 'Confirmed', prepare: 'Preparing', ship: 'Shipped', deliver: 'Delivered', cancel: 'Cancelled' };
+        const newStatus = statusMap[action];
+        if (!newStatus) return;
+        if (!confirm('Set this order to "' + newStatus + '"?')) return;
+        btn.disabled = true;
+        btn.textContent = 'Updating...';
+        firebase.database().ref('orders/' + oid + '/status').set(newStatus).then(() => {
+          loadAllOrders();
+        }).catch(err => {
+          alert('Update failed: ' + err.message);
+          btn.disabled = false;
         });
       }
     });
 
-    // Event delegation for admin status selects
-    document.getElementById('adminOrdersBody').addEventListener('change', (e) => {
-      if (e.target.classList.contains('admin-status-select')) {
-        const oid = e.target.dataset.orderId;
-        const val = e.target.value;
-        firebase.database().ref('orders/' + oid + '/status').set(val).then(() => {
-          e.target.style.borderColor = 'var(--sage)';
-          setTimeout(() => { e.target.style.borderColor = ''; }, 1500);
-        }).catch(err => alert('Update failed: ' + err.message));
-      }
+    // Sales dashboard logic
+    let _allDeliveredOrders = [];
+    let _currentSalesPeriod = 'daily';
+
+    function updateSalesDashboard(period) {
+      _currentSalesPeriod = period || _currentSalesPeriod;
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); // Mon=1
+      const startOfWeek = new Date(startOfDay);
+      startOfWeek.setDate(startOfWeek.getDate() - (dayOfWeek - 1));
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+      let cutoff;
+      if (_currentSalesPeriod === 'daily') cutoff = startOfDay;
+      else if (_currentSalesPeriod === 'weekly') cutoff = startOfWeek;
+      else if (_currentSalesPeriod === 'monthly') cutoff = startOfMonth;
+      else cutoff = startOfYear;
+
+      let totalSales = 0, totalTx = 0;
+      _allDeliveredOrders.forEach(o => {
+        const d = new Date(o.date);
+        if (d >= cutoff) {
+          const price = parseFloat(String(o.price).replace(/[^0-9.]/g, '')) || 0;
+          const qty = parseInt(o.quantity, 10) || 1;
+          totalSales += price * qty;
+          totalTx++;
+        }
+      });
+
+      document.getElementById('salesTotal').innerHTML = '&#8369;' + totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('salesCount').textContent = totalTx;
+    }
+
+    // Excel Export
+    document.getElementById('exportExcelBtn').addEventListener('click', () => {
+      if (!firebaseReady) { alert('Firebase not ready. Please wait.'); return; }
+      const btn = document.getElementById('exportExcelBtn');
+      btn.textContent = '⏳ Exporting...';
+      btn.disabled = true;
+      firebase.database().ref('orders').once('value').then(snap => {
+        const allOrders = snap.val();
+        if (!allOrders) { alert('No orders to export.'); return; }
+        if (typeof XLSX === 'undefined') { alert('Excel library not loaded. Check your internet connection.'); return; }
+
+        const orders = Object.entries(allOrders).map(([id, o]) => ({
+          'Order ID': id,
+          'Date': new Date(o.date).toLocaleDateString('en-PH', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }),
+          'Status': o.status || 'Pending',
+          'Product': o.product || '',
+          'Price': o.price || '',
+          'Quantity': o.quantity || 1,
+          'Total': ((parseFloat(String(o.price).replace(/[^0-9.]/g,'')) || 0) * (parseInt(o.quantity,10) || 1)).toFixed(2),
+          'Payment': o.payment_method || 'N/A',
+          'Customer': o.customer_name || '',
+          'Email': o.customer_email || '',
+          'Phone': o.customer_phone || '',
+          'Address': o.shipping_address || '',
+          'Notes': o.notes || ''
+        })).sort((a, b) => new Date(b.Date) - new Date(a.Date));
+
+        const wb = XLSX.utils.book_new();
+
+        // Sheet 1: All Orders
+        const wsAll = XLSX.utils.json_to_sheet(orders);
+        XLSX.utils.book_append_sheet(wb, wsAll, 'All Orders');
+
+        // Sheet per status
+        const statuses = ['Pending','Confirmed','Preparing','Shipped','Delivered','Cancelled'];
+        statuses.forEach(st => {
+          const rows = orders.filter(o => o.Status === st);
+          if (rows.length > 0) {
+            const ws = XLSX.utils.json_to_sheet(rows);
+            XLSX.utils.book_append_sheet(wb, ws, st);
+          }
+        });
+
+        // Sheet: Sales Summary (Delivered only)
+        const delivered = orders.filter(o => o.Status === 'Delivered');
+        if (delivered.length > 0) {
+          const totalSales = delivered.reduce((sum, o) => sum + parseFloat(o.Total), 0);
+          const summaryData = [
+            { 'Metric': 'Total Delivered Orders', 'Value': delivered.length },
+            { 'Metric': 'Total Sales (₱)', 'Value': totalSales.toFixed(2) },
+            { 'Metric': 'Report Date', 'Value': new Date().toLocaleDateString('en-PH', { year:'numeric', month:'long', day:'numeric' }) },
+            {},
+            { 'Metric': '--- Product Breakdown ---', 'Value': '' }
+          ];
+          const productMap = {};
+          delivered.forEach(o => {
+            if (!productMap[o.Product]) productMap[o.Product] = { qty: 0, sales: 0 };
+            productMap[o.Product].qty += parseInt(o.Quantity, 10) || 1;
+            productMap[o.Product].sales += parseFloat(o.Total) || 0;
+          });
+          Object.entries(productMap).sort((a,b) => b[1].sales - a[1].sales).forEach(([name, d]) => {
+            summaryData.push({ 'Metric': name, 'Value': '₱' + d.sales.toFixed(2) + ' (' + d.qty + ' sold)' });
+          });
+          const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+          XLSX.utils.book_append_sheet(wb, wsSummary, 'Sales Summary');
+        }
+
+        const dateStr = new Date().toISOString().slice(0,10);
+        XLSX.writeFile(wb, 'Blooms_Orders_' + dateStr + '.xlsx');
+      }).catch(err => {
+        alert('Export failed: ' + err.message);
+      }).finally(() => {
+        btn.innerHTML = '&#128202; Export Excel';
+        btn.disabled = false;
+      });
+    });
+
+    // Period tab clicks
+    document.getElementById('salesPeriodTabs').addEventListener('click', (e) => {
+      const tab = e.target.closest('.sales-period-tab');
+      if (!tab) return;
+      document.querySelectorAll('.sales-period-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      updateSalesDashboard(tab.dataset.period);
     });
 
     function loadAllOrders() {
       const body = document.getElementById('adminOrdersBody');
-      body.innerHTML = '<p style="text-align:center;padding:2rem;color:#999;">Loading orders...</p>';
+      body.innerHTML = '<div class="skeleton-loading"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>';
       firebase.database().ref('orders').once('value').then(snap => {
         const allOrders = snap.val();
         if (!allOrders) {
+          document.getElementById('salesDashboard').style.display = 'none';
           body.innerHTML = '<div class="dashboard-empty"><span>&#128203;</span><p>No orders received yet.</p></div>';
           return;
         }
         const sorted = Object.entries(allOrders).sort((a, b) => new Date(b[1].date) - new Date(a[1].date));
-        const statuses = ['Pending', 'Confirmed', 'Preparing', 'Shipped', 'Delivered', 'Cancelled'];
-        body.innerHTML = sorted.map(([id, o]) => {
-          const cs = o.status || 'Pending';
-          const opts = statuses.map(s => '<option value="' + s + '"' + (s === cs ? ' selected' : '') + '>' + s + '</option>').join('');
-          const dt = new Date(o.date).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-          return '<div class="admin-order-card"><div class="admin-order-top"><div>'
-            + '<div class="order-card-product">' + escapeHtml(o.product) + ' &times; ' + escapeHtml(String(o.quantity)) + '</div>'
-            + '<div class="order-card-price">' + escapeHtml(o.price) + '</div>'
-            + '</div><select class="admin-status-select" data-order-id="' + escapeHtml(id) + '">' + opts + '</select>'
-            + '</div><div class="admin-order-customer">'
-            + '&#128100; ' + escapeHtml(o.customer_name) + ' &middot; ' + escapeHtml(o.customer_email) + '<br>'
-            + '&#128241; ' + escapeHtml(o.customer_phone) + ' &middot; &#128179; ' + escapeHtml(o.payment_method || 'N/A') + '<br>'
-            + '&#128205; ' + escapeHtml(o.shipping_address || 'N/A') + '<br>'
-            + '&#128221; ' + escapeHtml(o.notes || 'None') + ' &middot; &#128197; ' + dt
-            + (o.payment_proof && /^https:\/\//i.test(o.payment_proof) ? '<br><strong>\ud83d\udcf8 Payment Proof:</strong> <a href="' + escapeHtml(o.payment_proof) + '" target="_blank" rel="noopener noreferrer"><img class="proof-thumb" src="' + escapeHtml(o.payment_proof) + '" alt="Payment proof" /></a>' : '')
-            + '<br><button class="btn-delete-order" data-order-id="' + escapeHtml(id) + '" style="margin-top:.5rem;">🗑 Delete Permanently</button>'
-            + '</div></div>';
+        const statusList = ORDER_STATUSES.map(s => ({ ...s, label: s.key + ' Orders' }));
+        const statuses = statusList.map(s => s.key);
+        const grouped = {};
+        statusList.forEach(s => { grouped[s.key] = []; });
+        sorted.forEach(([id, o]) => {
+          const st = o.status || 'Pending';
+          if (!grouped[st]) grouped[st] = [];
+          grouped[st].push([id, o]);
+        });
+
+        // Populate sales dashboard with delivered orders
+        _allDeliveredOrders = sorted.filter(([, o]) => o.status === 'Delivered').map(([, o]) => o);
+        document.getElementById('salesDashboard').style.display = '';
+        updateSalesDashboard();
+
+        body.innerHTML = statusList.map(s => {
+          const items = grouped[s.key];
+          const count = items ? items.length : 0;
+          const cardsHtml = count === 0
+            ? '<p style="text-align:center;color:#bbb;padding:.75rem;font-size:.82rem;">No ' + s.label.toLowerCase() + '</p>'
+            : items.map(([id, o]) => {
+            const cs = o.status || 'Pending';
+            const dt = new Date(o.date).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const actions = [
+              { action: 'confirm',  label: '\u2705 Confirm',  cls: 'act-confirm',  hide: ['Confirmed','Preparing','Shipped','Delivered','Cancelled'] },
+              { action: 'prepare',  label: '\ud83c\udf3a Prepare',  cls: 'act-prepare',  hide: ['Preparing','Shipped','Delivered','Cancelled'] },
+              { action: 'ship',     label: '\ud83d\ude9a Ship',     cls: 'act-ship',     hide: ['Shipped','Delivered','Cancelled'] },
+              { action: 'deliver',  label: '\ud83c\udf81 Deliver',  cls: 'act-deliver',  hide: ['Delivered','Cancelled'] },
+              { action: 'cancel',   label: '\u274c Cancel',   cls: 'act-cancel',   hide: ['Cancelled'] },
+              { action: 'delete',   label: '\ud83d\uddd1 Delete',   cls: 'act-delete',   hide: [] }
+            ];
+            const btnsHtml = actions
+              .filter(a => !a.hide.includes(cs))
+              .map(a => '<button class="admin-action-btn ' + a.cls + '" data-order-id="' + escapeHtml(id) + '" data-action="' + a.action + '">' + a.label + '</button>')
+              .join('');
+            return '<div class="admin-order-card"><div class="admin-order-top"><div>'
+              + '<div class="order-card-product">' + escapeHtml(o.product) + ' &times; ' + escapeHtml(String(o.quantity)) + '</div>'
+              + '<div class="order-card-price">' + escapeHtml(o.price) + '</div>'
+              + '</div><span class="status-badge status-' + cs.toLowerCase() + '">' + escapeHtml(cs) + '</span>'
+              + '</div><div class="admin-order-customer">'
+              + '&#128100; ' + escapeHtml(o.customer_name) + ' &middot; ' + escapeHtml(o.customer_email) + '<br>'
+              + '&#128241; ' + escapeHtml(o.customer_phone) + ' &middot; &#128179; ' + escapeHtml(o.payment_method || 'N/A') + '<br>'
+              + '&#128205; ' + escapeHtml(o.shipping_address || 'N/A') + '<br>'
+              + '&#128221; ' + escapeHtml(o.notes || 'None') + ' &middot; &#128197; ' + dt
+              + (o.payment_proof && /^https:\/\//i.test(o.payment_proof) ? '<br><strong>\ud83d\udcf8 Payment Proof:</strong> <a href="' + escapeHtml(o.payment_proof) + '" target="_blank" rel="noopener noreferrer"><img class="proof-thumb" src="' + escapeHtml(o.payment_proof) + '" alt="Payment proof" /></a>' : '')
+              + '<div class="admin-action-btns">' + btnsHtml + '</div>'
+              + '</div></div>';
+          }).join('');
+          return '<div class="admin-orders-section section-' + s.key.toLowerCase() + (count === 0 ? ' collapsed' : '') + '">'
+            + '<div class="admin-orders-section-header">'
+            + '<span>' + s.icon + ' ' + s.label + '</span>'
+            + '<span><span class="section-count">' + count + '</span> <span class="section-arrow">&#9660;</span></span>'
+            + '</div>'
+            + '<div class="admin-orders-section-body">' + cardsHtml + '</div>'
+            + '</div>';
         }).join('');
       }).catch(err => {
         console.error('Load all orders error:', err);
         body.innerHTML = '<div class="dashboard-empty"><span>&#9888;</span><p>Could not load orders: ' + escapeHtml(err.message) + '</p></div>';
       });
     }
+
+    /* ── Event Delegation: collapsible section headers ── */
+    document.addEventListener('click', (e) => {
+      const header = e.target.closest('.admin-orders-section-header');
+      if (header) {
+        header.parentElement.classList.toggle('collapsed');
+      }
+      // Settings popup save buttons → trigger main save
+      if (e.target.closest('.settings-save-popup')) {
+        const mainBtn = document.getElementById('settingsSaveAll');
+        if (mainBtn) mainBtn.click();
+      }
+    });
   </script>
 </body>
 </html>
