@@ -11,6 +11,9 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://blooms-that-never-fade.netlify.app/" />
   <meta name="twitter:card" content="summary_large_image" />
+  <!-- CSP temporarily disabled for debugging
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https://res.cloudinary.com https://*.cloudinary.com data:; connect-src 'self' https://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebaseio.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://api.cloudinary.com https://api.emailjs.com; frame-src 'none'; object-src 'none'; base-uri 'self';" />
+  -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌹</text></svg>" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
@@ -1307,6 +1310,14 @@
     }
     .btn-cancel-order:hover { background: #e57373; color: #fff; }
     .btn-cancel-order:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-delete-order {
+      display: inline-block; margin-top: .5rem; margin-left: .35rem; padding: .35rem .9rem;
+      border: 1.5px solid #b71c1c; background: #fff; color: #b71c1c;
+      border-radius: 8px; font-size: .72rem; font-weight: 600; cursor: pointer;
+      transition: all .25s; letter-spacing: .3px;
+    }
+    .btn-delete-order:hover { background: #b71c1c; color: #fff; }
+    .btn-delete-order:disabled { opacity: .5; cursor: not-allowed; }
     .admin-order-card {
       background: #fff; border-radius: 16px; padding: 1.25rem 1.5rem;
       margin-bottom: 1rem; box-shadow: 0 2px 12px rgba(0,0,0,.05);
@@ -1349,7 +1360,7 @@
       .order-card-meta { text-align: left; }
       .user-dropdown { right: -3rem; min-width: 180px; }
       .admin-status-select { min-height: 44px; font-size: .85rem; }
-      .btn-cancel-order { min-height: 40px; padding: .5rem 1rem; font-size: .78rem; }
+      .btn-cancel-order, .btn-delete-order { min-height: 40px; padding: .5rem 1rem; font-size: .78rem; }
     }
   </style>
 </head>
@@ -2050,7 +2061,7 @@
     /* ── Load Flower Images from Cloudinary ── */
     document.querySelectorAll('.card-image[data-image]').forEach(card => {
       const url = card.dataset.image;
-      if (!url) return;  // Skip cards with no image URL yet
+      if (!url || !isValidImageUrl(url)) return;  // Skip invalid/unsafe URLs
       const img = document.createElement('img');
       img.src = url;
       img.alt = card.closest('.gallery-card').querySelector('h3').textContent;
@@ -2293,13 +2304,25 @@
     }
 
     /* ── Contact Form — Save to Firebase + Send Email ── */
+    let _lastContactSubmit = 0;
     document.getElementById('contactForm').addEventListener('submit', (e) => {
       e.preventDefault();
       const form = e.target;
       const btn = form.querySelector('button');
-      const name = form.name.value.trim();
-      const email = form.email.value.trim();
-      const message = form.message.value.trim();
+
+      // Rate limit: 1 submission per 30 seconds
+      const now = Date.now();
+      if (now - _lastContactSubmit < 30000) {
+        alert('Please wait before sending another message.');
+        return;
+      }
+      _lastContactSubmit = now;
+
+      const name = form.name.value.trim().substring(0, 100);
+      const email = form.email.value.trim().substring(0, 200);
+      const message = form.message.value.trim().substring(0, 2000);
+
+      if (!name || !email || !message) { alert('Please fill in all fields.'); return; }
 
       btn.textContent = 'Sending...';
       btn.disabled = true;
@@ -2361,6 +2384,7 @@
     let isAdmin = false;
     let firebaseReady = false;
     let currentUser = null;
+    let canonicalPrices = {};  // Server-truth product prices keyed by name
 
     /* ── Firebase Init & Load Saved Data ── */
     if (FIREBASE_CONFIG.databaseURL) {
@@ -2385,6 +2409,8 @@
           }
 
           all.cards.forEach((d, i) => {
+            // Build canonical price map from Firebase (server truth)
+            if (d.name && d.price) canonicalPrices[d.name.trim()] = d.price;
             let card = document.querySelectorAll('.gallery-card')[i];
             // Create new card if it doesn't exist in HTML
             if (!card) {
@@ -2396,7 +2422,7 @@
             if (d.desc) card.querySelector('.card-body p').textContent = d.desc;
             if (d.price) card.querySelector('.card-price').textContent = d.price;
             if (d.tag) card.querySelector('.card-tag').textContent = d.tag;
-            if (d.image) {
+            if (d.image && isValidImageUrl(d.image)) {
               const ci = card.querySelector('.card-image');
               ci.dataset.image = d.image;
               let img = ci.querySelector('img');
@@ -2523,6 +2549,17 @@
       } catch { return false; }
     }
 
+    /* ── Image URL Validation — only allow trusted CDN domains ── */
+    function isValidImageUrl(url) {
+      if (!url || typeof url !== 'string') return false;
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== 'https:') return false;
+        const trusted = ['res.cloudinary.com', 'images.unsplash.com', 'i.imgur.com'];
+        return trusted.some(d => parsed.hostname === d || parsed.hostname.endsWith('.' + d));
+      } catch { return false; }
+    }
+
     /* ── Helper: Create a gallery card element ── */
     const bgClasses = ['bg1','bg2','bg3','bg4','bg5','bg6'];
     const defaultEmojis = ['\u{1F338}','\u{1F339}','\u{1F33B}','\u{1F33F}','\u{1F337}','\u{1F33A}'];
@@ -2551,7 +2588,7 @@
       card.querySelector('.card-price').textContent = data.price || '\u20B1100 each';
       card.querySelector('.card-tag').textContent = data.tag || 'New';
 
-      if (data.image) {
+      if (data.image && isValidImageUrl(data.image)) {
         const ci = card.querySelector('.card-image');
         const img = document.createElement('img');
         img.src = data.image;
@@ -2632,11 +2669,13 @@
     document.getElementById('adminEditBtn').addEventListener('click', () => {
       document.getElementById('userDropdown').classList.remove('open');
       if (isAdmin) return exitAdmin();
-      if (isAdminUser(currentUser)) enterAdmin();
+      if (currentUser && isAdminUser(currentUser)) enterAdmin();
+      else alert('Admin access denied.');
     });
 
-    // All Orders button (in dropdown)
+    // All Orders button (in dropdown) — guard with admin check
     document.getElementById('adminViewOrdersBtn').addEventListener('click', () => {
+      if (!currentUser || !isAdminUser(currentUser)) { alert('Admin access denied.'); return; }
       document.getElementById('userDropdown').classList.remove('open');
       loadAllOrders();
       document.getElementById('adminOrdersOverlay').classList.add('active');
@@ -2698,6 +2737,10 @@
 
     /* ── Save to Firebase ── */
     document.getElementById('adminSave').addEventListener('click', () => {
+      if (!currentUser || !isAdminUser(currentUser)) {
+        alert('Admin access denied. Sign in as admin to save.');
+        return;
+      }
       if (!firebaseReady) {
         alert('Firebase not configured yet! Add your Firebase config in the code.');
         return;
@@ -2770,6 +2813,7 @@
 
     /* ── Settings Panel ── */
     document.getElementById('adminSettingsBtn').addEventListener('click', () => {
+      if (!currentUser || !isAdminUser(currentUser)) { alert('Admin access denied.'); return; }
       document.getElementById('userDropdown').classList.remove('open');
       document.getElementById('settingsOverlay').classList.add('active');
       document.body.style.overflow = 'hidden';
@@ -3013,6 +3057,12 @@
       .then(r => r.json())
       .then(data => {
         if (data.secure_url) {
+          // Security: Validate returned URL is from Cloudinary
+          if (!/^https:\/\/res\.cloudinary\.com\//i.test(data.secure_url)) {
+            proofStatus.textContent = 'Invalid upload response.';
+            proofStatus.className = 'proof-status error';
+            return;
+          }
           window._paymentProofUrl = data.secure_url;
           proofStatus.textContent = '\u2713 Uploaded successfully';
           proofStatus.className = 'proof-status success';
@@ -3144,17 +3194,29 @@
       const uName = currentUser.displayName || currentUser.email.split('@')[0];
       const phone = formData.get('customer_phone') || 'Not provided';
       const address = formData.get('shipping_address') || 'Not provided';
+
+      // Security: Use canonical price from Firebase, not DOM
+      const verifiedPrice = canonicalPrices[currentOrderProduct.trim()] || currentOrderPrice;
+      if (verifiedPrice !== currentOrderPrice) {
+        console.warn('Price mismatch detected — using server price:', verifiedPrice);
+      }
+
+      // Validate quantity
+      let qty = parseInt(formData.get('quantity'), 10);
+      if (isNaN(qty) || qty < 1) qty = 1;
+      if (qty > 99) qty = 99;
+
       const orderData = {
         product: currentOrderProduct,
-        price: currentOrderPrice,
+        price: verifiedPrice,
         customer_name: uName,
         customer_email: currentUser.email,
         customer_phone: phone,
         shipping_address: address,
-        quantity: formData.get('quantity'),
+        quantity: qty,
         payment_method: formData.get('payment_method'),
-        payment_proof: window._paymentProofUrl || '',
-        notes: formData.get('notes') || 'None',
+        payment_proof: (window._paymentProofUrl && /^https:\/\/res\.cloudinary\.com\//i.test(window._paymentProofUrl)) ? window._paymentProofUrl : '',
+        notes: (formData.get('notes') || 'None').substring(0, 500),
         status: 'Pending',
         uid: currentUser.uid,
         date: new Date().toISOString()
@@ -3233,6 +3295,11 @@
       const d = document.createElement('div');
       d.textContent = str || '';
       return d.innerHTML;
+    }
+
+    // Escape for safe use in HTML attributes (href, src, data-*)
+    function escapeAttr(str) {
+      return escapeHtml(str).replace(/'/g, '&#39;').replace(/`/g, '&#96;');
     }
 
     // Firebase Auth state observer
@@ -3459,6 +3526,7 @@
             + '<div class="order-card-date">' + dt + '</div>'
             + '<span class="status-badge ' + sc + '">' + escapeHtml(st) + '</span>'
             + (canCancel ? '<button class="btn-cancel-order" data-order-id="' + escapeHtml(id) + '">Cancel Order</button>' : '')
+            + ((st === 'Cancelled' || st === 'Delivered') ? '<button class="btn-delete-order" data-order-id="' + escapeHtml(id) + '">🗑 Delete</button>' : '')
             + '</div></div>';
         }).join('');
       }).catch(err => {
@@ -3482,12 +3550,43 @@
           e.target.textContent = 'Cancel Order';
         });
       }
+      // Customer delete order permanently
+      if (e.target.classList.contains('btn-delete-order')) {
+        const oid = e.target.dataset.orderId;
+        if (!confirm('Delete this order permanently? This cannot be undone.')) return;
+        e.target.disabled = true;
+        e.target.textContent = 'Deleting...';
+        firebase.database().ref('orders/' + oid).remove().then(() => {
+          loadMyOrders();
+        }).catch(err => {
+          alert('Delete failed: ' + err.message);
+          e.target.disabled = false;
+          e.target.textContent = '🗑 Delete';
+        });
+      }
     });
 
     // Admin: Close orders panel
     document.getElementById('adminOrdersClose').addEventListener('click', () => {
       document.getElementById('adminOrdersOverlay').classList.remove('active');
       document.body.style.overflow = '';
+    });
+
+    // Admin: Delete order permanently
+    document.getElementById('adminOrdersBody').addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-delete-order')) {
+        const oid = e.target.dataset.orderId;
+        if (!confirm('Delete this order permanently? This cannot be undone.')) return;
+        e.target.disabled = true;
+        e.target.textContent = 'Deleting...';
+        firebase.database().ref('orders/' + oid).remove().then(() => {
+          loadAllOrders();
+        }).catch(err => {
+          alert('Delete failed: ' + err.message);
+          e.target.disabled = false;
+          e.target.textContent = '🗑 Delete Permanently';
+        });
+      }
     });
 
     // Event delegation for admin status selects
@@ -3527,6 +3626,7 @@
             + '&#128205; ' + escapeHtml(o.shipping_address || 'N/A') + '<br>'
             + '&#128221; ' + escapeHtml(o.notes || 'None') + ' &middot; &#128197; ' + dt
             + (o.payment_proof && /^https:\/\//i.test(o.payment_proof) ? '<br><strong>\ud83d\udcf8 Payment Proof:</strong> <a href="' + escapeHtml(o.payment_proof) + '" target="_blank" rel="noopener noreferrer"><img class="proof-thumb" src="' + escapeHtml(o.payment_proof) + '" alt="Payment proof" /></a>' : '')
+            + '<br><button class="btn-delete-order" data-order-id="' + escapeHtml(id) + '" style="margin-top:.5rem;">🗑 Delete Permanently</button>'
             + '</div></div>';
         }).join('');
       }).catch(err => {
